@@ -4,9 +4,8 @@ import os
 
 app = Flask(__name__)
 
-# FREE HuggingFace Inference API
 HF_API_URL = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
-HF_API_KEY = os.environ.get("HF_API_KEY")  # set in Render environment
+HF_API_KEY = os.environ.get("HF_API_KEY")
 
 headers = {
     "Authorization": f"Bearer {HF_API_KEY}"
@@ -14,9 +13,7 @@ headers = {
 
 def get_ai_response(prompt):
     try:
-        payload = {
-            "inputs": prompt
-        }
+        payload = {"inputs": prompt}
 
         response = requests.post(
             HF_API_URL,
@@ -30,7 +27,7 @@ def get_ai_response(prompt):
         if isinstance(result, list):
             return result[0].get("generated_text", "No response")
         else:
-            return "AI is loading, try again."
+            return "Model loading, try again."
 
     except Exception as e:
         return str(e)
@@ -39,12 +36,9 @@ def get_ai_response(prompt):
 def chat():
     data = request.json
     user_message = data.get("message", "")
-
     ai_reply = get_ai_response(user_message)
-
-    return jsonify({
-        "response": ai_reply
-    })
+    return jsonify({"response": ai_reply})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
