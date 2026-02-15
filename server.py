@@ -7,7 +7,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ==============================
-# Groq Config
+# Groq Configuration
 # ==============================
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
@@ -17,14 +17,16 @@ if not GROQ_API_KEY:
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # ==============================
-# Health Check
+# Health Check Route
 # ==============================
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "Groq AI Backend Running 🚀"})
+    return jsonify({
+        "status": "Groq AI Backend Running 🚀"
+    })
 
 # ==============================
-# AI Function (Groq)
+# AI Response Function
 # ==============================
 def get_ai_response(prompt):
     try:
@@ -41,14 +43,29 @@ def get_ai_response(prompt):
             ]
         }
 
-        response = requests.post(GROQ_URL, headers=headers, json=payload)
+        response = requests.post(
+            GROQ_URL,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+
+        # 🔎 Check HTTP status first
+        if response.status_code != 200:
+            return f"Groq HTTP Error: {response.text}"
 
         result = response.json()
 
-        return result["choices"][0]["message"]["content"]
+        # 🔎 Validate response structure
+        if "choices" in result and len(result["choices"]) > 0:
+            return result["choices"][0]["message"]["content"]
 
+        return f"Unexpected response: {result}"
+
+    except requests.exceptions.Timeout:
+        return "Request timed out. Please try again."
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Server Error: {str(e)}"
 
 # ==============================
 # Chat Endpoint
@@ -63,7 +80,9 @@ def chat():
     user_message = data["message"]
     ai_reply = get_ai_response(user_message)
 
-    return jsonify({"response": ai_reply})
+    return jsonify({
+        "response": ai_reply
+    })
 
 # ==============================
 # Run App (Render Compatible)
