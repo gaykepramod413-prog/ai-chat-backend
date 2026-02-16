@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Get API Key safely
+# Get Groq API key from Render Environment Variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -14,12 +14,14 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "Groq AI Backend Running"})
+    return jsonify({
+        "status": "AI Backend Running Successfully 🚀"
+    })
 
 
-def get_ai_response(prompt):
+def get_ai_response(user_message):
     if not GROQ_API_KEY:
-        return "Server Error: GROQ_API_KEY is not configured."
+        return "Server configuration error: API key missing."
 
     try:
         headers = {
@@ -31,7 +33,7 @@ def get_ai_response(prompt):
             "model": "llama3-8b-8192",
             "messages": [
                 {"role": "system", "content": "You are a helpful AI assistant."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": user_message}
             ]
         }
 
@@ -42,11 +44,10 @@ def get_ai_response(prompt):
             timeout=30
         )
 
-        response.raise_for_status()  # Raises error if status != 200
-
+        response.raise_for_status()
         result = response.json()
 
-        return result.get("choices", [{}])[0].get("message", {}).get("content", "No response from AI")
+        return result["choices"][0]["message"]["content"]
 
     except requests.exceptions.RequestException as e:
         return f"Request Error: {str(e)}"
@@ -59,12 +60,17 @@ def chat():
     data = request.get_json()
 
     if not data or "message" not in data:
-        return jsonify({"error": "Message is required"}), 400
+        return jsonify({"error": "Message field is required"}), 400
 
-    ai_reply = get_ai_response(data["message"])
-    return jsonify({"response": ai_reply})
+    user_message = data["message"]
+    ai_reply = get_ai_response(user_message)
+
+    return jsonify({
+        "response": ai_reply
+    })
 
 
-# IMPORTANT: Run server
+# Required for Render
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
