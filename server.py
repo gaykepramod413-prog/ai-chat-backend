@@ -6,18 +6,21 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+# Get API Key safely
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY is not set in environment variables")
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "Groq AI Backend Running 🚀"})
+    return jsonify({"status": "Groq AI Backend Running"})
+
 
 def get_ai_response(prompt):
+    if not GROQ_API_KEY:
+        return "Server Error: GROQ_API_KEY is not configured."
+
     try:
         headers = {
             "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -32,20 +35,24 @@ def get_ai_response(prompt):
             ]
         }
 
-        response = requests.post(GROQ_URL, headers=headers, json=payload)
+        response = requests.post(
+            GROQ_URL,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
 
-        if response.status_code != 200:
-            return f"Groq Error: {response.text}"
+        response.raise_for_status()  # Raises error if status != 200
 
         result = response.json()
 
-        if "choices" in result:
-            return result["choices"][0]["message"]["content"]
+        return result.get("choices", [{}])[0].get("message", {}).get("content", "No response from AI")
 
-        return f"Unexpected response: {result}"
-
+    except requests.exceptions.RequestException as e:
+        return f"Request Error: {str(e)}"
     except Exception as e:
         return f"Server Error: {str(e)}"
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -56,3 +63,8 @@ def chat():
 
     ai_reply = get_ai_response(data["message"])
     return jsonify({"response": ai_reply})
+
+
+# IMPORTANT: Run server
+if __name__ == "__main__":
+    app.run(debug=True)
