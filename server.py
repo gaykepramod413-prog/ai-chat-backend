@@ -41,8 +41,9 @@ def chat():
             "Content-Type": "application/json"
         }
 
+        # ✅ FIXED MODEL NAME
         payload = {
-            "model": "llama3-8b-8192",
+            "model": "llama-3.1-8b-instant",   # UPDATED MODEL
             "messages": [
                 {
                     "role": "system",
@@ -64,7 +65,6 @@ def chat():
             timeout=30
         )
 
-        # If Groq returns error, show full response
         if response.status_code != 200:
             return jsonify({
                 "error": "Groq API Error",
@@ -72,7 +72,6 @@ def chat():
             }), response.status_code
 
         result = response.json()
-
         ai_reply = result["choices"][0]["message"]["content"]
 
         return jsonify({"response": ai_reply})
@@ -87,7 +86,7 @@ def chat():
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
-# For local testing only (Render uses Gunicorn)
+# Local testing only (Render uses Gunicorn)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
