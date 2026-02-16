@@ -6,9 +6,10 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Get Groq API key from Render Environment Variables
+# Get API key from Render environment
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
+# Groq endpoint
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
@@ -19,9 +20,20 @@ def home():
     })
 
 
-def get_ai_response(user_message):
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
+
+    user_message = data.get("message")
+
+    if not user_message:
+        return jsonify({"error": "Message field is required"}), 400
+
     if not GROQ_API_KEY:
-        return "Server configuration error: API key missing."
+        return jsonify({"error": "GROQ_API_KEY not configured"}), 500
 
     try:
         headers = {
@@ -47,30 +59,17 @@ def get_ai_response(user_message):
         response.raise_for_status()
         result = response.json()
 
-        return result["choices"][0]["message"]["content"]
+        ai_reply = result["choices"][0]["message"]["content"]
+
+        return jsonify({"response": ai_reply})
 
     except requests.exceptions.RequestException as e:
-        return f"Request Error: {str(e)}"
+        return jsonify({"error": f"Request error: {str(e)}"}), 500
     except Exception as e:
-        return f"Server Error: {str(e)}"
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.get_json()
-
-    if not data or "message" not in data:
-        return jsonify({"error": "Message field is required"}), 400
-
-    user_message = data["message"]
-    ai_reply = get_ai_response(user_message)
-
-    return jsonify({
-        "response": ai_reply
-    })
-
-
-# Required for Render
+# IMPORTANT FOR LOCAL TESTING ONLY
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
