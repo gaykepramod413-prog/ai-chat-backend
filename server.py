@@ -44,9 +44,17 @@ def chat():
         payload = {
             "model": "llama3-8b-8192",
             "messages": [
-                {"role": "system", "content": "You are a helpful AI assistant."},
-                {"role": "user", "content": user_message}
-            ]
+                {
+                    "role": "system",
+                    "content": "You are a helpful AI assistant."
+                },
+                {
+                    "role": "user",
+                    "content": user_message
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 1024
         }
 
         response = requests.post(
@@ -56,20 +64,30 @@ def chat():
             timeout=30
         )
 
-        response.raise_for_status()
+        # If Groq returns error, show full response
+        if response.status_code != 200:
+            return jsonify({
+                "error": "Groq API Error",
+                "details": response.text
+            }), response.status_code
+
         result = response.json()
 
         ai_reply = result["choices"][0]["message"]["content"]
 
         return jsonify({"response": ai_reply})
 
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Groq request timed out"}), 500
+
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Request error: {str(e)}"}), 500
+
     except Exception as e:
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
-# IMPORTANT FOR LOCAL TESTING ONLY
+# For local testing only (Render uses Gunicorn)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
