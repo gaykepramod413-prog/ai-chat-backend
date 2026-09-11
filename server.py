@@ -43,7 +43,7 @@ def chat():
 
         # ✅ FIXED MODEL NAME
         payload = {
-            "model": "llama-3.1-8b-instant",   # UPDATED MODEL
+            "model": "openai/gpt-oss-120b",   # UPDATED MODEL
             "messages": [
                 {
                     "role": "system",
